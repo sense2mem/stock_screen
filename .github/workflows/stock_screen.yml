@@ -24,6 +24,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+- name: Download data_e.xls (JPX)
+  run: |
+    curl -L -o data_e.xls "https://www.jpx.co.jp/english/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_e.xls"
+    test -s data_e.xls
+    ls -l data_e.xls
 
       # ★ data_e.xls が必要なら、ここで用意する（後述）
       - name: Check data file
