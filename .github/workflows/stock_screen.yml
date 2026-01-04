@@ -30,14 +30,6 @@ jobs:
     test -s data_e.xls
     ls -l data_e.xls
 
-      # ★ data_e.xls が必要なら、ここで用意する（後述）
-      - name: Check data file
-        run: |
-          if [ ! -f data_e.xls ]; then
-            echo "data_e.xls not found. Put it in the repo or download it in workflow."
-            exit 1
-          fi
-
       - name: Run screen
         env:
           TZ: Asia/Tokyo
