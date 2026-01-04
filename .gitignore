@@ -4,20 +4,23 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 
-# ---- OS / Editor ----
+# ---- Editor / OS ----
+.vscode/
 .DS_Store
 Thumbs.db
-.vscode/
 
 # ---- Secrets ----
 .env
-*.key
-*.pem
 
 # ---- Outputs ----
 output/
 outputs/
 *.csv
 *.log
+
+# ---- Data (必要に応じて方針変更) ----
+data_e.xls
+*.xls
+*.xlsx
+.venv/
