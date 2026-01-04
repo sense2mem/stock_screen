@@ -1,0 +1,47 @@
+name: stock_screen (weekday 20:00 JST)
+
+on:
+  schedule:
+    - cron: "0 11 * * 1-5"   # 20:00 JST (UTC+9)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ★ data_e.xls が必要なら、ここで用意する（後述）
+      - name: Check data file
+        run: |
+          if [ ! -f data_e.xls ]; then
+            echo "data_e.xls not found. Put it in the repo or download it in workflow."
+            exit 1
+          fi
+
+      - name: Run screen
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          python screen_yearend.py
+
+      - name: Upload CSV artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: screen_csv_${{ github.run_id }}
+          path: |
+            screen_*.csv
