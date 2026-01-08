@@ -117,7 +117,7 @@ jobs:
             cp -f "$f" "archive/latest/${kind}.csv" # latest/all.csv
           done
 
-          git add archive
+          git add -f archive
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "archive: ${day}" || echo "no changes"
