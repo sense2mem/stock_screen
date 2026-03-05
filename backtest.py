@@ -427,7 +427,9 @@ def make_html_report(metrics: dict, trades_df: pd.DataFrame, equity_df: pd.DataF
 
     # トレード行HTML
     rows_html = ""
-    for _, r in trades_df.tail(50).sort_values("exit_date", ascending=False).iterrows():
+    if trades_df.empty or "exit_date" not in trades_df.columns:
+        rows_html = '<tr><td colspan="8" style="text-align:center;color:#94a3b8">トレードなし（シグナルCSVが1日分のみの場合、翌日価格と照合できないためトレードが発生しません）</td></tr>'
+    for _, r in (trades_df.tail(50).sort_values("exit_date", ascending=False).iterrows() if not trades_df.empty and "exit_date" in trades_df.columns else []):
         cls = "win" if r["pnl"] > 0 else "loss"
         rows_html += (
             f'<tr class="{cls}">'
