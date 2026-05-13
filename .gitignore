@@ -24,3 +24,4 @@ data_e.xls
 *.xls
 *.xlsx
 .venv/
+openclaw_analyze_and_commit.sh
