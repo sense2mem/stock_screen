@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>バックテストレポート 2026-05-21</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px; }
+  h1   { color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+  h2   { color: #7dd3fc; margin-top: 30px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; }
+  .card { background: #1e293b; border-radius: 10px; padding: 16px; text-align: center; border: 1px solid #334155; }
+  .card .val { font-size: 2em; font-weight: bold; }
+  .card .lbl { font-size: 0.85em; color: #94a3b8; margin-top: 4px; }
+  .pos { color: #4ade80; } .neg { color: #f87171; } .neu { color: #facc15; }
+  canvas { max-height: 320px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-top: 12px; }
+  th { background: #1e293b; padding: 8px; text-align: left; color: #94a3b8; }
+  td { padding: 6px 8px; border-bottom: 1px solid #1e293b; }
+  tr:hover td { background: #1e293b; }
+  .win  { color: #4ade80; } .loss { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>📊 バックテストレポート <span style="font-size:0.7em;color:#94a3b8">2026-05-21</span></h1>
+
+<h2>サマリー</h2>
+<div class="grid">
+  <div class="card"><div class="val pos">0%</div><div class="lbl">総リターン</div></div>
+  <div class="card"><div class="val pos">¥0</div><div class="lbl">総損益</div></div>
+  <div class="card"><div class="val neu">0%</div><div class="lbl">勝率</div></div>
+  <div class="card"><div class="val neu">0回</div><div class="lbl">総トレード数</div></div>
+  <div class="card"><div class="val neu">0</div><div class="lbl">プロフィットファクター</div></div>
+  <div class="card"><div class="val neu">0</div><div class="lbl">シャープレシオ</div></div>
+  <div class="card"><div class="val neg">0%</div><div class="lbl">最大ドローダウン</div></div>
+  <div class="card"><div class="val pos">0%</div><div class="lbl">平均利益</div></div>
+  <div class="card"><div class="val neg">0%</div><div class="lbl">平均損失</div></div>
+</div>
+
+<h2>エクイティカーブ</h2>
+<canvas id="equityChart"></canvas>
+
+<h2>月次損益</h2>
+<canvas id="monthlyChart"></canvas>
+
+<h2>トレード履歴（直近50件）</h2>
+<table>
+<thead><tr>
+  <th>銘柄</th><th>エントリー</th><th>エグジット</th>
+  <th>買値</th><th>売値</th><th>損益(円)</th><th>騰落率</th><th>理由</th>
+</tr></thead>
+<tbody>
+<tr><td colspan="8" style="text-align:center;color:#94a3b8">トレードなし（シグナルCSVが1日分のみの場合、翌日価格と照合できないためトレードが発生しません）</td></tr>
+</tbody>
+</table>
+
+<script>
+// エクイティカーブ
+const eqData = [{"date": "2026-05-21", "equity": 1000000.0}];
+new Chart(document.getElementById('equityChart'), {
+  type: 'line',
+  data: {
+    labels: eqData.map(d => d.date),
+    datasets: [{ label: '資産推移(円)', data: eqData.map(d => d.equity),
+      borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.1)',
+      fill: true, tension: 0.3, pointRadius: 0 }]
+  },
+  options: { plugins: { legend: { labels: { color:'#e2e8f0' } } },
+    scales: { x: { ticks:{color:'#94a3b8'}, grid:{color:'#1e293b'} },
+              y: { ticks:{color:'#94a3b8'}, grid:{color:'#1e293b'} } } }
+});
+
+// 月次損益
+const monthly = [];
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: monthly.map(d => d.month),
+    datasets: [{ label: '月次損益(円)', data: monthly.map(d => d.pnl),
+      backgroundColor: monthly.map(d => d.pnl >= 0 ? 'rgba(74,222,128,0.7)' : 'rgba(248,113,113,0.7)') }]
+  },
+  options: { plugins: { legend: { labels: { color:'#e2e8f0' } } },
+    scales: { x: { ticks:{color:'#94a3b8'}, grid:{color:'#1e293b'} },
+              y: { ticks:{color:'#94a3b8'}, grid:{color:'#1e293b'} } } }
+});
+</script>
+</body></html>
