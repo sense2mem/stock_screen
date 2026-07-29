@@ -1,0 +1,31 @@
+﻿signal_date,ticker,holding_days,status,message
+2026-03-25,5352.T,5,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
+2026-03-25,5352.T,10,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
+2026-03-25,5352.T,20,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
+2026-03-25,5352.T,40,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
+2026-05-18,6201.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-05-18,6201.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-05-18,6201.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-05-18,6201.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-04,5019.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-04,8194.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-05,9101.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-05,9104.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-10,7181.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-10,9956.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-11,2501.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-18,1815.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-18,2986.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-18,5214.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-24,9793.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-06-25,4676.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-02,2432.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-02,2432.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-07,2432.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-07,2432.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-13,7613.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-13,7613.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-27,2702.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-27,2702.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-27,2702.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-07-27,2702.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
