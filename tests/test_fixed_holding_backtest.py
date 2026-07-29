@@ -3,17 +3,29 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from fixed_holding_backtest import evaluate_signal, load_signals, select_signals, summarize_results
+from fixed_holding_backtest import (
+    download_prices,
+    evaluate_signal,
+    load_signals,
+    select_signals,
+    summarize_results,
+)
+
+
+OHLC = ["Open", "High", "Low", "Close"]
 
 
 def prices(periods=45):
     index = pd.bdate_range("2026-01-05", periods=periods)
-    return pd.DataFrame({
-        "Open": np.arange(periods) + 100.0,
-        "High": np.arange(periods) + 103.0,
-        "Low": np.arange(periods) + 98.0,
-        "Close": np.arange(periods) + 102.0,
-    }, index=index)
+    return pd.DataFrame(
+        {
+            "Open": np.arange(periods) + 100.0,
+            "High": np.arange(periods) + 103.0,
+            "Low": np.arange(periods) + 98.0,
+            "Close": np.arange(periods) + 102.0,
+        },
+        index=index,
+    )
 
 
 def test_next_trading_day_open_and_fifth_day_close_and_excursions():
@@ -29,10 +41,15 @@ def test_next_trading_day_open_and_fifth_day_close_and_excursions():
 
 
 def test_first_in_streak_uses_screening_order_and_allows_reentry():
-    signals = pd.DataFrame({
-        "signal_date": pd.to_datetime(["2026-01-09", "2026-01-12", "2026-01-09", "2026-01-13", "2026-01-14"]),
-        "ticker": ["AAA", "AAA", "BBB", "BBB", "AAA"], "score": [8] * 5,
-    })
+    signals = pd.DataFrame(
+        {
+            "signal_date": pd.to_datetime(
+                ["2026-01-09", "2026-01-12", "2026-01-09", "2026-01-13", "2026-01-14"]
+            ),
+            "ticker": ["AAA", "AAA", "BBB", "BBB", "AAA"],
+            "score": [8] * 5,
+        }
+    )
     selected = select_signals(signals, "first_in_streak")
     aaa = selected[selected.ticker == "AAA"].sort_values("signal_date")
     assert aaa.is_used.tolist() == [True, False, True]
@@ -63,13 +80,52 @@ def test_screening_day_without_qualifying_ticker_breaks_streak(tmp_path: Path):
     assert select_signals(signals, "first_in_streak").is_used.tolist() == [True, True]
 
 
-def test_missing_ticker_prices_do_not_prevent_other_evaluation():
-    signals = pd.DataFrame({"signal_date": pd.to_datetime(["2026-01-05"] * 2), "ticker": ["OK", "MISSING"], "score": [8, 8]})
-    available = {"OK": prices()}
-    results = []
-    for _, signal in signals.iterrows():
-        if signal.ticker in available:
-            results.extend(evaluate_signal(signal, available[signal.ticker], [5]))
-        else:
-            results.append({"ticker": signal.ticker, "status": "PRICE_DOWNLOAD_FAILED"})
-    assert [row["status"] for row in results] == ["CLOSED", "PRICE_DOWNLOAD_FAILED"]
+def _ticker_first_frame():
+    data = prices(10)
+    data.columns = pd.MultiIndex.from_product([["OK"], OHLC])
+    return data
+
+
+def _field_first_frame():
+    data = prices(10)
+    data.columns = pd.MultiIndex.from_product([OHLC, ["OK"]])
+    return data
+
+
+def test_download_prices_handles_ticker_first_and_missing_ticker(monkeypatch):
+    monkeypatch.setattr(
+        "fixed_holding_backtest.yf.download",
+        lambda *args, **kwargs: _ticker_first_frame(),
+    )
+    found, failures = download_prices(
+        ["OK", "MISSING"], pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-01")
+    )
+    assert set(found) == {"OK"}
+    assert set(failures) == {"MISSING"}
+    assert list(found["OK"].columns) == OHLC
+
+
+def test_download_prices_handles_field_first_multiindex(monkeypatch):
+    monkeypatch.setattr(
+        "fixed_holding_backtest.yf.download",
+        lambda *args, **kwargs: _field_first_frame(),
+    )
+    found, failures = download_prices(
+        ["OK", "MISSING"], pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-01")
+    )
+    assert set(found) == {"OK"}
+    assert set(failures) == {"MISSING"}
+    assert list(found["OK"].columns) == OHLC
+
+
+def test_download_exception_marks_chunk_failed_and_does_not_raise(monkeypatch):
+    def fail(*args, **kwargs):
+        raise RuntimeError("network unavailable")
+
+    monkeypatch.setattr("fixed_holding_backtest.yf.download", fail)
+    found, failures = download_prices(
+        ["AAA", "BBB"], pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-01")
+    )
+    assert found == {}
+    assert set(failures) == {"AAA", "BBB"}
+    assert all("network unavailable" in message for message in failures.values())
