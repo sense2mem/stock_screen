@@ -55,9 +55,10 @@ jobs:
           path: |
             screen_*.csv
 
-      # dataブランチの日付別アーカイブと当日分から固定保有テスト入力を作る。
-      # worktreeを使うため、実行中のソースブランチは切り替えない。
+      # 固定保有テストは検証中の追加機能。失敗しても従来処理を止めない。
       - name: Prepare fixed-holding signal history
+        id: prepare_fixed_holding
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -70,9 +71,18 @@ jobs:
             -path '/tmp/stock_screen_data/archive/????-??-??/screen_*_buy.csv' \
             -exec cp -f {} fixed_holding_input/ \;
           cp -f screen_*_buy.csv fixed_holding_input/
-          echo "Historical/current buy CSV count: $(find fixed_holding_input -maxdepth 1 -name 'screen_*_buy.csv' | wc -l)"
+          count="$(find fixed_holding_input -maxdepth 1 -name 'screen_*_buy.csv' | wc -l)"
+          echo "Historical/current buy CSV count: ${count}"
+          test "${count}" -gt 0
+
+      - name: Warn when fixed-holding preparation failed
+        if: steps.prepare_fixed_holding.outcome == 'failure'
+        run: echo "::warning::Fixed-holding input preparation failed. Existing screen, backtest, and archive processing will continue."
 
       - name: Run fixed-holding backtests
+        id: run_fixed_holding
+        if: steps.prepare_fixed_holding.outcome == 'success'
+        continue-on-error: true
         env:
           TZ: Asia/Tokyo
         run: |
@@ -83,17 +93,21 @@ jobs:
             --score-min 8 --holdings 5 10 20 40 --signal-mode all \
             --output-dir fixed_holding_report/all
 
+      - name: Warn when fixed-holding backtest failed
+        if: steps.run_fixed_holding.outcome == 'failure'
+        run: echo "::warning::Fixed-holding backtest failed. Existing screen, backtest, and archive processing will continue."
+
       - name: Upload fixed-holding report
         uses: actions/upload-artifact@v6
         if: always()
         with:
           name: fixed_holding_report_${{ github.run_id }}
           path: fixed_holding_report/
+          if-no-files-found: warn
           retention-days: 30
 
       # ─────────────────────────────────────────
-      # ② バックテスト（新規追加）
-      #    screen_*.csv がカレントディレクトリにある前提で実行
+      # ② 既存バックテスト
       # ─────────────────────────────────────────
       - name: Run backtest
         env:
@@ -102,7 +116,6 @@ jobs:
           mkdir -p backtest_report
           # RESULTS_DIR=. でカレントディレクトリのCSVを読み込む
           RESULTS_DIR=. python backtest.py
-        if: success()
 
       - name: Upload backtest report
         uses: actions/upload-artifact@v6
@@ -150,10 +163,10 @@ jobs:
             cp -f "${bt_files[@]}" /tmp/backtest_report/
             bt_html="found"
           fi
-          # 固定保有レポートもブランチ切替前に退避
+          # 固定保有レポートもブランチ切替前に退避。存在しない場合は何もしない。
           fh_found=""
           rm -rf /tmp/fixed_holding_report
-          if [ -d fixed_holding_report ]; then
+          if [ -d fixed_holding_report ] && find fixed_holding_report -type f -name '*.csv' -print -quit | grep -q .; then
             cp -a fixed_holding_report /tmp/fixed_holding_report
             fh_found="found"
           fi
