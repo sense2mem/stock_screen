@@ -87,10 +87,10 @@ jobs:
           TZ: Asia/Tokyo
         run: |
           python fixed_holding_backtest.py --signals-dir fixed_holding_input \
-            --score-min 8 --holdings 5 10 20 40 --signal-mode first_in_streak \
+            --score-min 8 --holdings 5 10 20 40 50 60 --signal-mode first_in_streak \
             --output-dir fixed_holding_report/first_in_streak
           python fixed_holding_backtest.py --signals-dir fixed_holding_input \
-            --score-min 8 --holdings 5 10 20 40 --signal-mode all \
+            --score-min 8 --holdings 5 10 20 40 50 60 --signal-mode all \
             --output-dir fixed_holding_report/all
 
       - name: Warn when fixed-holding backtest failed
