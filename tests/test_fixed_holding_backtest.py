@@ -62,6 +62,16 @@ def test_insufficient_days_excluded_from_summary():
     assert summarize_results(detail, [40]).iloc[0].trades == 0
 
 
+def test_50_and_60_day_holding_periods_are_summarized():
+    signal = pd.Series({"signal_date": "2026-01-05", "ticker": "AAA", "score": 8})
+    holdings = [50, 60]
+    detail = pd.DataFrame(evaluate_signal(signal, prices(65), holdings))
+    assert detail["status"].tolist() == ["CLOSED", "CLOSED"]
+    summary = summarize_results(detail, holdings)
+    assert summary["holding_days"].tolist() == holdings
+    assert summary["trades"].tolist() == [1, 1]
+
+
 def test_load_signals_normalizes_and_deduplicates(tmp_path: Path):
     pd.DataFrame({"ticker": [" aaa ", "AAA", "LOW"], "score": [8, 9, 7]}).to_csv(
         tmp_path / "screen_2026-01-05_buy.csv", index=False
