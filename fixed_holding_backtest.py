@@ -424,7 +424,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--signals-dir", default="fixed_holding_input")
     parser.add_argument("--signal-pattern", default="screen_*_buy.csv")
     parser.add_argument("--score-min", type=float, default=8)
-    parser.add_argument("--holdings", type=int, nargs="+", default=[5, 10, 20, 40])
+    parser.add_argument(
+        "--holdings", type=int, nargs="+", default=[5, 10, 20, 40, 50, 60]
+    )
     parser.add_argument(
         "--signal-mode",
         choices=["all", "first_in_streak"],
