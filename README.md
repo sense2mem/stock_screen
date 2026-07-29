@@ -57,12 +57,23 @@ python signal_path_analysis.py \
   --output-dir signal_path_report
 ```
 
-出力ファイルは次の5種類です。
+出力ファイルは次の6種類です。
 
 - `signal_path_detail.csv`: 第1高値、調整安値、第2高値、上抜け日、50/60日リターン
 - `signal_features.csv`: RSI、ADX、DI差、移動平均線、高値距離、出来高比率、逆三尊段階
 - `pattern_feature_summary.csv`: 価格経路分類別の件数と50/60日成績
 - `average_price_curve.csv`: 買付価格を100とした分類別平均価格推移
 - `signal_path_status.csv`: 未確定・価格取得失敗の明細
+- `condition_signals.csv`: 条件A〜Cのいずれかに該当するシグナルと判定列
+
+条件A〜Cはシグナル日までの情報だけで判定します。
+
+- 条件A: `pullback_from_60d_high_pct <= -12`
+- 条件B: 条件A、かつ `ma20_distance_pct >= 1`
+- 条件C: `ma20_distance_pct >= 1`、かつ `di_spread >= 3`
+
+`condition_signals.csv` には `condition_a`、`condition_b`、`condition_c` と、該当条件を
+`A|B|C` 形式で示す `condition_labels` が入ります。手動GitHub ActionsのSummaryにも、
+条件別件数とシグナル日・ticker・銘柄名・主要指標の一覧を表示します。
 
 初期判定値はコマンドライン引数で変更できます。分析結果を確認するまでは、通常のscore8判定への加点や除外には使用しません。
