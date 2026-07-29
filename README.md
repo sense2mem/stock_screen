@@ -4,7 +4,7 @@
 ## score8 固定保有バックテスト
 
 `fixed_holding_backtest.py` は、日次の `screen_YYYY-MM-DD_buy.csv` に含まれる
-score8以上の候補を、シグナル翌取引日の始値で買い、5・10・20・40営業日目の
+score8以上の候補を、シグナル翌取引日の始値で買い、5・10・20・40・50・60営業日目の
 終値で売る独立したバックテストです。保有期間中（エントリー日・エグジット日を含む）
 のMFE/MAEも計算します。
 
@@ -13,7 +13,7 @@ python fixed_holding_backtest.py \
   --signals-dir fixed_holding_input \
   --signal-pattern "screen_*_buy.csv" \
   --score-min 8 \
-  --holdings 5 10 20 40 \
+  --holdings 5 10 20 40 50 60 \
   --signal-mode first_in_streak \
   --output-dir fixed_holding_report/first_in_streak
 ```
