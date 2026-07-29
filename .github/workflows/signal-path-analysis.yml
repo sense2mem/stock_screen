@@ -86,8 +86,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Compile analysis program
-        run: python -m py_compile signal_path_analysis.py
+      - name: Compile analysis programs
+        run: |
+          python -m py_compile signal_path_analysis.py
+          python -m py_compile condition_signal_output.py
 
       - name: Prepare historical score8 signal files
         shell: bash
@@ -159,6 +161,9 @@ jobs:
           pullback_max_pct=${PULLBACK_MAX_PCT}
           breakout_margin_pct=${BREAKOUT_MARGIN_PCT}
           lookback=${LOOKBACK}
+          condition_a=pullback_from_60d_high_pct<=-12
+          condition_b=condition_a and ma20_distance_pct>=1
+          condition_c=ma20_distance_pct>=1 and di_spread>=3
           EOF
 
           ls -lh signal_path_report
@@ -205,6 +210,15 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
               handle.write("\n".join(lines) + "\n")
           PY
+
+      - name: Create condition A-C signal output
+        shell: bash
+        run: |
+          python condition_signal_output.py \
+            --features signal_path_report/signal_features.csv \
+            --output signal_path_report/condition_signals.csv \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+          ls -lh signal_path_report/condition_signals.csv
 
       - name: Upload signal path report
         uses: actions/upload-artifact@v6
