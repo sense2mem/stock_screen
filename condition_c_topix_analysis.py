@@ -15,6 +15,7 @@ import pandas as pd
 LOGGER = logging.getLogger("condition_c_topix_analysis")
 TOKYO = ZoneInfo("Asia/Tokyo")
 MARKET_CLOSE = time(15, 30)
+DEFAULT_BENCHMARK_TICKER = "998405.T"
 REQUIRED_STOCK_COLUMNS = {"Open", "High", "Low", "Close"}
 REQUIRED_BENCHMARK_COLUMNS = {"Open", "Close"}
 DETAIL_COLUMNS = [
@@ -87,7 +88,7 @@ def evaluate_trade(
     signal: pd.Series,
     stock_prices: pd.DataFrame,
     benchmark_prices: pd.DataFrame,
-    benchmark_ticker: str = "^TOPX",
+    benchmark_ticker: str = DEFAULT_BENCHMARK_TICKER,
     stop_loss_pct: float = 14.0,
     holding_days: int = 60,
 ) -> dict:
@@ -116,8 +117,7 @@ def evaluate_trade(
     stop_price = entry_price * (1.0 + stop_return / 100.0)
     row.update(entry_date=entry_date, entry_price=entry_price, stop_price=stop_price)
 
-    # Requiring the full 60-day cohort avoids censoring bias where recent losers
-    # can stop out but recent non-losers have not yet reached their planned exit.
+    # Require the complete 60-day cohort to avoid censoring recent open trades.
     if len(future) < holding_days:
         row.update(
             status="OPEN_INSUFFICIENT_DAYS",
@@ -194,7 +194,7 @@ def build_analysis(
     signals: pd.DataFrame,
     stock_prices: dict[str, pd.DataFrame],
     benchmark_prices: pd.DataFrame,
-    benchmark_ticker: str = "^TOPX",
+    benchmark_ticker: str = DEFAULT_BENCHMARK_TICKER,
     stop_loss_pct: float = 14.0,
     holding_days: int = 60,
     failures: dict[str, str] | None = None,
@@ -314,7 +314,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--signals", default="signal_path_report/condition_c_signal_day.csv")
     parser.add_argument("--output-dir", default="signal_path_report")
-    parser.add_argument("--benchmark-ticker", default="^TOPX")
+    parser.add_argument("--benchmark-ticker", default=DEFAULT_BENCHMARK_TICKER)
     parser.add_argument("--stop-loss-pct", type=float, default=14.0)
     parser.add_argument("--holding-days", type=int, default=60)
     parser.add_argument("--github-summary", default=os.environ.get("GITHUB_STEP_SUMMARY", ""))
