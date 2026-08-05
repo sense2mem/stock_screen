@@ -93,6 +93,8 @@ jobs:
           python -m py_compile condition_backtest.py
           python -m py_compile condition_backtest_v2.py
           python -m py_compile condition_c_topix_analysis.py
+          python -m py_compile condition_c_topix_analysis_yahoojp.py
+          python -m py_compile topix_yahoo_jp.py
 
       - name: Prepare historical score8 signal files
         shell: bash
@@ -176,6 +178,7 @@ jobs:
           condition_c_strategy_stop_loss_pct=14
           condition_c_strategy_exit=stop_loss_or_60th_trading_day_close
           condition_c_benchmark=TOPIX_998405.T
+          condition_c_benchmark_source=Yahoo_Finance_Japan_history_page
           condition_c_benchmark_period=entry_day_open_to_actual_strategy_exit_day_close
           EOF
 
@@ -254,7 +257,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python condition_c_topix_analysis.py \
+          python condition_c_topix_analysis_yahoojp.py \
             --signals signal_path_report/condition_c_signal_day.csv \
             --output-dir signal_path_report \
             --benchmark-ticker '998405.T' \
@@ -270,11 +273,13 @@ jobs:
           detail = pd.read_csv(report / "condition_c_topix_detail.csv", encoding="utf-8-sig")
           matured = detail[detail["strategy_return_pct"].notna()]
           completed = detail[detail["status"].eq("CLOSED")]
-          print(f"TOPIX benchmark ticker: 998405.T")
+          print("TOPIX benchmark ticker: 998405.T")
+          print("TOPIX source: Yahoo Finance Japan history page")
           print(f"Matured strategy trades: {len(matured)}")
           print(f"Completed benchmark comparisons: {len(completed)}")
           if len(matured) > 0 and len(completed) == 0:
-              raise RuntimeError("TOPIX comparison produced zero completed rows for matured trades")
+              statuses = detail.loc[matured.index, "status"].value_counts().to_dict()
+              raise RuntimeError(f"TOPIX comparison produced zero completed rows: {statuses}")
           PY
 
           ls -lh \
