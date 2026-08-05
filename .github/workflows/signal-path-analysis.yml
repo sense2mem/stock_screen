@@ -175,7 +175,7 @@ jobs:
           condition_backtest_summary=deduplicated_by_ticker_condition_entry_date
           condition_c_strategy_stop_loss_pct=14
           condition_c_strategy_exit=stop_loss_or_60th_trading_day_close
-          condition_c_benchmark=TOPIX_^TOPX
+          condition_c_benchmark=TOPIX_998405.T
           condition_c_benchmark_period=entry_day_open_to_actual_strategy_exit_day_close
           EOF
 
@@ -257,10 +257,25 @@ jobs:
           python condition_c_topix_analysis.py \
             --signals signal_path_report/condition_c_signal_day.csv \
             --output-dir signal_path_report \
-            --benchmark-ticker '^TOPX' \
+            --benchmark-ticker '998405.T' \
             --stop-loss-pct 14 \
             --holding-days 60 \
             --github-summary "$GITHUB_STEP_SUMMARY"
+
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          report = Path("signal_path_report")
+          detail = pd.read_csv(report / "condition_c_topix_detail.csv", encoding="utf-8-sig")
+          matured = detail[detail["strategy_return_pct"].notna()]
+          completed = detail[detail["status"].eq("CLOSED")]
+          print(f"TOPIX benchmark ticker: 998405.T")
+          print(f"Matured strategy trades: {len(matured)}")
+          print(f"Completed benchmark comparisons: {len(completed)}")
+          if len(matured) > 0 and len(completed) == 0:
+              raise RuntimeError("TOPIX comparison produced zero completed rows for matured trades")
+          PY
 
           ls -lh \
             signal_path_report/condition_c_topix_detail.csv \
