@@ -90,6 +90,7 @@ jobs:
         run: |
           python -m py_compile signal_path_analysis.py
           python -m py_compile condition_signal_output.py
+          python -m py_compile condition_backtest.py
 
       - name: Prepare historical score8 signal files
         shell: bash
@@ -164,6 +165,8 @@ jobs:
           condition_a=pullback_from_60d_high_pct<=-12
           condition_b=condition_a and ma20_distance_pct>=1
           condition_c=ma20_distance_pct>=1 and di_spread>=3
+          condition_backtest_entry=next_trading_day_open_after_first_occurrence
+          condition_backtest_holdings=5,10,20,40,50,60
           EOF
 
           ls -lh signal_path_report
@@ -219,6 +222,32 @@ jobs:
             --output signal_path_report/condition_signals.csv \
             --github-summary "$GITHUB_STEP_SUMMARY"
           ls -lh signal_path_report/condition_signals.csv
+
+      - name: Run condition A-C first-occurrence backtest
+        env:
+          TZ: Asia/Tokyo
+          SIGNAL_MODE: ${{ inputs.signal_mode }}
+          SCORE_MIN: ${{ inputs.score_min }}
+          LOOKBACK: ${{ inputs.lookback }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python condition_backtest.py \
+            --signals-dir fixed_holding_input \
+            --signal-pattern 'screen_*_buy.csv' \
+            --score-min "$SCORE_MIN" \
+            --signal-mode "$SIGNAL_MODE" \
+            --output-dir signal_path_report \
+            --path-detail signal_path_report/signal_path_detail.csv \
+            --lookback "$LOOKBACK" \
+            --holdings 5 10 20 40 50 60 \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+
+          ls -lh \
+            signal_path_report/condition_backtest_detail.csv \
+            signal_path_report/condition_backtest_summary.csv \
+            signal_path_report/condition_average_price_curve.csv \
+            signal_path_report/condition_backtest_status.csv
 
       - name: Upload signal path report
         uses: actions/upload-artifact@v6
