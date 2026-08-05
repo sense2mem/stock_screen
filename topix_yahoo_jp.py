@@ -2,6 +2,7 @@
 """Download TOPIX daily OHLC data from Yahoo! Finance Japan history pages."""
 from __future__ import annotations
 
+import re
 from html.parser import HTMLParser
 from typing import Any
 
@@ -11,6 +12,9 @@ import requests
 DEFAULT_TOPIX_TICKER = "998405.T"
 EXPECTED_HEADERS = ("日付", "始値", "高値", "安値", "終値")
 PRICE_COLUMNS = ["Open", "High", "Low", "Close"]
+_JAPANESE_DATE = re.compile(
+    r"(?P<year>\d{4})年\s*(?P<month>\d{1,2})月\s*(?P<day>\d{1,2})日"
+)
 
 
 class _TableParser(HTMLParser):
@@ -61,6 +65,23 @@ def _number(value: Any) -> float:
     return float(text)
 
 
+def _date(value: Any) -> pd.Timestamp | pd.NaT:
+    """Parse Yahoo Japan dates such as 2026年8月4日(火) deterministically."""
+    text = "" if value is None else str(value).strip()
+    match = _JAPANESE_DATE.search(text)
+    if match:
+        try:
+            return pd.Timestamp(
+                year=int(match.group("year")),
+                month=int(match.group("month")),
+                day=int(match.group("day")),
+            )
+        except ValueError:
+            return pd.NaT
+    parsed = pd.to_datetime(text, errors="coerce")
+    return pd.NaT if pd.isna(parsed) else pd.Timestamp(parsed).normalize()
+
+
 def parse_index_history_html(html: str) -> pd.DataFrame:
     """Parse the visible date/open/high/low/close history table."""
     parser = _TableParser()
@@ -86,7 +107,7 @@ def parse_index_history_html(html: str) -> pd.DataFrame:
     for cells in selected:
         if len(cells) <= required_max:
             continue
-        date = pd.to_datetime(cells[header_positions["日付"]], errors="coerce")
+        date = _date(cells[header_positions["日付"]])
         if pd.isna(date):
             continue
         rows.append(
