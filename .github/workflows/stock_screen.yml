@@ -1,7 +1,7 @@
-name: stock_screen (weekday 20:00 JST)
+name: stock_screen (weekday 20:17 JST)
 on:
   schedule:
-    - cron: "0 11 * * 1-5"   # 20:00 JST (UTC+9)
+    - cron: "17 11 * * 1-5"   # 20:17 JST (UTC+9), avoid top-of-hour congestion
   workflow_dispatch:
 jobs:
   run:
@@ -38,13 +38,13 @@ jobs:
           ls -l data_e.xls
 
       # ─────────────────────────────────────────
-      # ① スクリーニング（既存・変更なし）
+      # ① スクリーニング
       # ─────────────────────────────────────────
       - name: Run screen
         env:
           TZ: Asia/Tokyo
         run: |
-          python screen_yearend.py
+          python run_stock_screen.py
           ls -la
           ls -la screen_*.csv || true
 
