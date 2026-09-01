@@ -6,7 +6,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60        # バックテスト分を加味して45→60に延長
+    timeout-minutes: 90        # stale時の1回再取得を含める
     permissions:
       contents: write
     concurrency:
@@ -181,14 +181,52 @@ jobs:
           else
             git checkout -b data
           fi
-          # 3) 日付アーカイブ（元ファイル名のまま）
+          # 3) 日付アーカイブ
+          #
+          # Collision policy:
+          # - target does not exist -> create it
+          # - target exists and screen CSVs are byte-identical -> no-op
+          # - target exists but differs -> FAIL, never overwrite
+          if [ -d "archive/${day}" ]; then
+            new_screen=(/tmp/screen_csv/*.csv)
+            existing_screen=(archive/"${day}"/screen_"${day}"_*.csv)
+
+            if [ ${#new_screen[@]} -ne ${#existing_screen[@]} ]; then
+              echo "::error::Archive collision for ${day}: screen CSV count differs."
+              echo "new=${#new_screen[@]} existing=${#existing_screen[@]}"
+              exit 1
+            fi
+
+            for src in "${new_screen[@]}"; do
+              base="$(basename "$src")"
+              dst="archive/${day}/${base}"
+
+              if [ ! -f "$dst" ]; then
+                echo "::error::Archive collision for ${day}: missing existing file ${base}"
+                exit 1
+              fi
+
+              if ! cmp -s "$src" "$dst"; then
+                echo "::error::Archive collision for ${day}: ${base} differs."
+                echo "Existing archive will NOT be overwritten."
+                exit 1
+              fi
+            done
+
+            echo "archive/${day} already contains identical screen CSVs."
+            echo "Archive operation is a no-op."
+            exit 0
+          fi
+
           mkdir -p "archive/${day}"
           cp -f /tmp/screen_csv/*.csv "archive/${day}/"
+
           # バックテスト結果もアーカイブ
           if [ -n "$bt_html" ]; then
             mkdir -p "archive/${day}/backtest"
             cp -f /tmp/backtest_report/* "archive/${day}/backtest/"
           fi
+
           if [ -n "$fh_found" ]; then
             mkdir -p "archive/${day}/fixed_holding"
             cp -a /tmp/fixed_holding_report/. "archive/${day}/fixed_holding/"

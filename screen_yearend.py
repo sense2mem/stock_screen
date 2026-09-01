@@ -490,6 +490,48 @@ def _normalize_ohlcv(df, ticker: str):
     return df
 
 
+def _filter_scoring_bars(df, end):
+    """Return actual traded daily bars suitable for Score calculation.
+
+    A valid Score bar must:
+    - contain finite OHLCV values
+    - not be later than end
+    - have Volume > 0
+
+    This prevents zero-volume carry-forward/synthetic rows from advancing
+    technical indicators or the resolved signal date.
+    """
+    if df is None or df.empty:
+        return df
+
+    d = df.copy()
+
+    d = d.dropna(
+        subset=[
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "Volume",
+        ]
+    )
+
+    d = d.loc[
+        d.index <= pd.Timestamp(end)
+    ]
+
+    volume = pd.to_numeric(
+        d["Volume"],
+        errors="coerce",
+    )
+
+    d = d.loc[
+        volume > 0
+    ].copy()
+
+    return d
+
+
 def _chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i+n]
@@ -564,13 +606,27 @@ def screen_tech(tickers, chunk_size=20, pause_sec=0.2, max_retry=2):
                     errors.append((t, f"missing_ohlcv: {list(d.columns)}"))
                     continue
 
-                d = d.dropna(subset=["Open","High","Low","Close","Volume"])
-                d = d.loc[d.index <= end]
+                d = _filter_scoring_bars(
+                    d,
+                    end,
+                )
+
+                if d is None or d.empty:
+                    errors.append(
+                        (
+                            t,
+                            "no_valid_positive_volume_bars",
+                        )
+                    )
+                    continue
 
                 # [FIX-12] 週足変数 w（デッドコード）を削除
 
                 meta = score_buy_signals(d)
                 meta["ticker"] = t
+                meta["price_date"] = pd.Timestamp(
+                    d.index[-1]
+                ).normalize()
                 rows.append(meta)
 
             except Exception as e:
@@ -582,7 +638,7 @@ def screen_tech(tickers, chunk_size=20, pause_sec=0.2, max_retry=2):
     out = pd.DataFrame(rows)
     if out.empty:
         out = pd.DataFrame(columns=[
-            "ticker",
+            "ticker","price_date",
             "score","gc_multi","rsi","macd_buy_like",
             "vol_surge","vol_quiet","vol_down","hurst",
             "close","close_adj","adv20","adv20_m",
@@ -937,10 +993,34 @@ def apply_filters_and_make_trades(all_df: pd.DataFrame, val_df: pd.DataFrame, en
     if "sell_reason" not in merged.columns:
         merged["sell_reason"] = ""
 
-    sell_mask = merged["sell_score"].fillna(0).ge(SELL_SCORE_MIN)
+    if "bar_is_current" in merged.columns:
+        bar_is_current = (
+            merged["bar_is_current"]
+            .fillna(False)
+            .astype(bool)
+        )
+    else:
+        bar_is_current = pd.Series(
+            True,
+            index=merged.index,
+        )
+
+    sell_mask = (
+        merged["sell_score"]
+        .fillna(0)
+        .ge(SELL_SCORE_MIN)
+        & bar_is_current
+    )
 
     if SELL_EXIT_BEFORE_EARNINGS and "days_to_earnings" in merged.columns:
-        earn_exit = merged["days_to_earnings"].between(0, EARNINGS_EXIT_PRE_BDAYS)
+        earn_exit = (
+            merged["days_to_earnings"]
+            .between(
+                0,
+                EARNINGS_EXIT_PRE_BDAYS,
+            )
+            & bar_is_current
+        )
         sell_mask = sell_mask | earn_exit
         sr = merged.loc[earn_exit, "sell_reason"].fillna("")
         merged.loc[earn_exit, "sell_reason"] = np.where(
