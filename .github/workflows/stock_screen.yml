@@ -1,5 +1,8 @@
 name: stock_screen (weekday 20:17 JST)
 on:
+  push:
+    paths:
+      - ".github/workflows/stock_screen.yml"
   schedule:
     - cron: "17 11 * * 1-5"   # 20:17 JST (UTC+9), avoid top-of-hour congestion
   workflow_dispatch:
@@ -30,12 +33,108 @@ jobs:
           pip install -r requirements.txt
           # backtest.py が使う追加ライブラリ（requirements.txtに含まれていない場合のみ）
           pip install yfinance pandas numpy --quiet
+          # JPX銘柄一覧URL障害時のフォールバック用
+          pip install finance-datareader tokyo-stock-exchange xlwt --quiet
 
-      - name: Download data_e.xls (JPX)
+      - name: Download data_e.xls (JPX with fallback)
+        shell: bash
         run: |
-          curl -L -o data_e.xls "https://www.jpx.co.jp/english/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_e.xls"
-          test -s data_e.xls
+          set -euo pipefail
+          JPX_URL="https://www.jpx.co.jp/english/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_e.xls"
+          rm -f data_e.xls
+
+          if curl -fL --retry 3 --retry-delay 2 -o data_e.xls "$JPX_URL"; then
+            echo "Downloaded JPX listing from the legacy URL."
+          else
+            echo "::warning::JPX legacy listing URL is unavailable; using fallback listing source."
+            rm -f data_e.xls
+          fi
+
+          if python - <<'PY'
+          from pathlib import Path
+          p = Path("data_e.xls")
+          if not p.is_file() or p.stat().st_size == 0:
+              raise SystemExit(1)
+          magic = p.read_bytes()[:8]
+          # Legacy XLS (OLE) or XLSX (ZIP). Pandas can determine either format by signature.
+          if magic.startswith(b"\xd0\xcf\x11\xe0") or magic.startswith(b"PK\x03\x04"):
+              raise SystemExit(0)
+          raise SystemExit(1)
+          PY
+          then
+            echo "JPX listing file signature is valid."
+          else
+            echo "::warning::JPX response is not an Excel file. Building a compatible listing file."
+            python - <<'PY'
+          import re
+          import pandas as pd
+          import xlwt
+
+          def extract_codes(df):
+              preferred = ["Symbol", "Code", "コード", "Local Code", "local_code", "ticker"]
+              mapping = {str(c).strip().lower(): c for c in df.columns}
+              col = None
+              for name in preferred:
+                  key = name.strip().lower()
+                  if key in mapping:
+                      col = mapping[key]
+                      break
+              if col is None:
+                  col = df.columns[0]
+
+              out = []
+              for value in df[col].tolist():
+                  text = str(value).strip()
+                  m = re.fullmatch(r"(\d{4})(?:\.0)?", text)
+                  if m:
+                      out.append(m.group(1))
+              return sorted(set(out))
+
+          codes = []
+          source = None
+
+          try:
+              import FinanceDataReader as fdr
+              df = fdr.StockListing("TSE")
+              codes = extract_codes(df)
+              if len(codes) >= 2000:
+                  source = "FinanceDataReader:TSE"
+          except Exception as exc:
+              print(f"FinanceDataReader fallback failed: {exc}")
+
+          if len(codes) < 2000:
+              try:
+                  from tokyo_stock_exchange import tse
+                  df = pd.read_csv(tse.csv_file_path)
+                  codes = extract_codes(df)
+                  if len(codes) >= 2000:
+                      source = f"tokyo-stock-exchange:{tse.get_file_date()}"
+              except Exception as exc:
+                  print(f"tokyo-stock-exchange fallback failed: {exc}")
+
+          if len(codes) < 2000:
+              raise RuntimeError(f"Ticker fallback produced too few numeric TSE codes: {len(codes)}")
+
+          book = xlwt.Workbook()
+          sheet = book.add_sheet("Sheet1")
+          sheet.write(0, 1, "Code")
+          for row, code in enumerate(codes, start=1):
+              sheet.write(row, 1, code)
+          book.save("data_e.xls")
+          print(f"Fallback listing source={source} numeric_codes={len(codes)}")
+          PY
+          fi
+
+          file data_e.xls || true
           ls -l data_e.xls
+          python - <<'PY'
+          import pandas as pd
+          s = pd.read_excel("data_e.xls", sheet_name="Sheet1", usecols="B", header=None).iloc[:, 0]
+          codes = s.astype(str).str.strip().str.extract(r"(\d{4})", expand=False).dropna().unique().tolist()
+          print(f"validated ticker codes: {len(codes)}")
+          if len(codes) < 2000:
+              raise RuntimeError(f"Validated ticker count is too small: {len(codes)}")
+          PY
 
       # ─────────────────────────────────────────
       # ① スクリーニング
