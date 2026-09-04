@@ -67,7 +67,7 @@ concurrency:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout analysis branch
@@ -86,8 +86,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Compile analysis program
-        run: python -m py_compile signal_path_analysis.py
+      - name: Compile analysis programs
+        run: |
+          python -m py_compile signal_path_analysis.py
+          python -m py_compile condition_signal_output.py
+          python -m py_compile condition_backtest.py
+          python -m py_compile condition_backtest_v2.py
+          python -m py_compile condition_c_topix_analysis.py
+          python -m py_compile condition_c_topix_analysis_yahoojp.py
+          python -m py_compile topix_yahoo_jp.py
 
       - name: Prepare historical score8 signal files
         shell: bash
@@ -159,6 +166,20 @@ jobs:
           pullback_max_pct=${PULLBACK_MAX_PCT}
           breakout_margin_pct=${BREAKOUT_MARGIN_PCT}
           lookback=${LOOKBACK}
+          condition_a=pullback_from_60d_high_pct<=-12
+          condition_b=condition_a and ma20_distance_pct>=1
+          condition_c=ma20_distance_pct>=1 and di_spread>=3
+          condition_c_signal_day_source=conventional_score8_signal_features
+          condition_backtest_entry=next_trading_day_open_after_first_occurrence
+          condition_backtest_holdings=5,10,20,40,50,60
+          condition_backtest_max_trigger_days=60
+          condition_backtest_current_day=excluded_before_15:30_JST
+          condition_backtest_summary=deduplicated_by_ticker_condition_entry_date
+          condition_c_strategy_stop_loss_pct=14
+          condition_c_strategy_exit=stop_loss_or_60th_trading_day_close
+          condition_c_benchmark=TOPIX_998405.T
+          condition_c_benchmark_source=Yahoo_Finance_Japan_history_page
+          condition_c_benchmark_period=entry_day_open_to_actual_strategy_exit_day_close
           EOF
 
           ls -lh signal_path_report
@@ -169,42 +190,101 @@ jobs:
           python - <<'PY'
           import os
           from pathlib import Path
-
           import pandas as pd
 
           report = Path("signal_path_report")
           detail = pd.read_csv(report / "signal_path_detail.csv", encoding="utf-8-sig")
           features = pd.read_csv(report / "signal_features.csv", encoding="utf-8-sig")
           status = pd.read_csv(report / "signal_path_status.csv", encoding="utf-8-sig")
-
           counts = detail["path_label"].value_counts(dropna=False)
           stages = features["pattern_stage"].value_counts(dropna=False)
-
           lines = [
-              "# Signal path analysis",
-              "",
+              "# Signal path analysis", "",
               f"- Signals analyzed: **{len(detail)}**",
               f"- DOUBLE_RISE_SUCCESS: **{int(counts.get('DOUBLE_RISE_SUCCESS', 0))}**",
-              f"- In progress / non-closed status rows: **{len(status)}**",
-              "",
-              "## Price-path classifications",
-              "",
-              "| Classification | Count |",
-              "|---|---:|",
+              f"- In progress / non-closed status rows: **{len(status)}**", "",
+              "## Price-path classifications", "", "| Classification | Count |", "|---|---:|",
           ]
           lines.extend(f"| {label} | {int(count)} |" for label, count in counts.items())
-          lines.extend([
-              "",
-              "## Signal-date pattern stages",
-              "",
-              "| Pattern stage | Count |",
-              "|---|---:|",
-          ])
+          lines.extend(["", "## Signal-date pattern stages", "", "| Pattern stage | Count |", "|---|---:|"])
           lines.extend(f"| {label} | {int(count)} |" for label, count in stages.items())
-
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
               handle.write("\n".join(lines) + "\n")
           PY
+
+      - name: Create condition A-C signal output
+        shell: bash
+        run: |
+          python condition_signal_output.py \
+            --features signal_path_report/signal_features.csv \
+            --output signal_path_report/condition_signals.csv \
+            --condition-c-output signal_path_report/condition_c_signal_day.csv \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+          ls -lh \
+            signal_path_report/condition_signals.csv \
+            signal_path_report/condition_c_signal_day.csv
+
+      - name: Run confirmed condition A-C first-occurrence backtest
+        env:
+          TZ: Asia/Tokyo
+          SIGNAL_MODE: ${{ inputs.signal_mode }}
+          SCORE_MIN: ${{ inputs.score_min }}
+          LOOKBACK: ${{ inputs.lookback }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python condition_backtest_v2.py \
+            --signals-dir fixed_holding_input \
+            --signal-pattern 'screen_*_buy.csv' \
+            --score-min "$SCORE_MIN" \
+            --signal-mode "$SIGNAL_MODE" \
+            --output-dir signal_path_report \
+            --path-detail signal_path_report/signal_path_detail.csv \
+            --lookback "$LOOKBACK" \
+            --max-trigger-days 60 \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+
+          ls -lh \
+            signal_path_report/condition_backtest_detail.csv \
+            signal_path_report/condition_backtest_unique_entries.csv \
+            signal_path_report/condition_backtest_summary.csv \
+            signal_path_report/condition_average_price_curve.csv \
+            signal_path_report/condition_backtest_status.csv
+
+      - name: Compare conventional condition C strategy with TOPIX
+        env:
+          TZ: Asia/Tokyo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python condition_c_topix_analysis_yahoojp.py \
+            --signals signal_path_report/condition_c_signal_day.csv \
+            --output-dir signal_path_report \
+            --benchmark-ticker '998405.T' \
+            --stop-loss-pct 14 \
+            --holding-days 60 \
+            --github-summary "$GITHUB_STEP_SUMMARY"
+
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          report = Path("signal_path_report")
+          detail = pd.read_csv(report / "condition_c_topix_detail.csv", encoding="utf-8-sig")
+          matured = detail[detail["strategy_return_pct"].notna()]
+          completed = detail[detail["status"].eq("CLOSED")]
+          print("TOPIX benchmark ticker: 998405.T")
+          print("TOPIX source: Yahoo Finance Japan history page")
+          print(f"Matured strategy trades: {len(matured)}")
+          print(f"Completed benchmark comparisons: {len(completed)}")
+          if len(matured) > 0 and len(completed) == 0:
+              statuses = detail.loc[matured.index, "status"].value_counts().to_dict()
+              raise RuntimeError(f"TOPIX comparison produced zero completed rows: {statuses}")
+          PY
+
+          ls -lh \
+            signal_path_report/condition_c_topix_detail.csv \
+            signal_path_report/condition_c_topix_summary.csv
 
       - name: Upload signal path report
         uses: actions/upload-artifact@v6
