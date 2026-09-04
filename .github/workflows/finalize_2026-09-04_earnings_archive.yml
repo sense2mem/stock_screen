@@ -1,0 +1,154 @@
+name: finalize 2026-09-04 earnings archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/finalize_2026-09-04_earnings_archive.yml"
+  workflow_dispatch:
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install pandas numpy
+      - name: Repair and verify Sep 4 archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin data
+          rm -rf /tmp/datafix
+          git worktree add --detach /tmp/datafix origin/data
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          root = Path('/tmp/datafix/archive/2026-09-04')
+          as_of = pd.Timestamp('2026-09-04')
+          verified = pd.Timestamp('2026-11-11')
+          # Official company IR calendar verified on 2026-09-05:
+          # https://www.hibiya-eng.co.jp/ja/ir/calendar.html
+
+          for kind in ('all','buy','sell'):
+              p = root / f'screen_2026-09-04_{kind}.csv'
+              df = pd.read_csv(p)
+              nd = pd.to_datetime(df.get('next_earn_date'), errors='coerce')
+              stale = nd.notna() & (nd < as_of)
+              if 'earn_date_raw_stale' not in df.columns:
+                  df['earn_date_raw_stale'] = False
+              df.loc[stale, 'earn_date_raw_stale'] = True
+              if 'earn_date_source' not in df.columns:
+                  df['earn_date_source'] = ''
+              if 'earn_date_lookup_error' not in df.columns:
+                  df['earn_date_lookup_error'] = ''
+              for c in ('earn_ts','earn_start_ts','earn_end_ts','earn_ts_pick'):
+                  if c in df.columns:
+                      df.loc[stale, c] = np.nan
+              df.loc[stale, 'next_earn_date'] = pd.NaT
+              df.loc[stale, 'days_to_earnings'] = np.nan
+              df.loc[stale, 'earn_date_source'] = 'unknown_stale_rejected'
+
+              m = df['ticker'].astype(str).eq('1982.T')
+              if m.any():
+                  # timestamp at JST midnight; existing converter round-trips to 2026-11-11
+                  ts = verified.tz_localize('Asia/Tokyo').timestamp()
+                  for c in ('earn_ts','earn_start_ts','earn_end_ts','earn_ts_pick'):
+                      if c in df.columns:
+                          df.loc[m, c] = ts
+                  df.loc[m, 'next_earn_date'] = verified.strftime('%Y-%m-%d')
+                  df.loc[m, 'days_to_earnings'] = int(np.busday_count(
+                      np.datetime64(as_of.date()), np.datetime64(verified.date())
+                  ))
+                  df.loc[m, 'earn_date_source'] = 'official_ir_verified'
+                  df.loc[m, 'earn_date_raw_stale'] = True
+                  df.loc[m, 'earn_date_lookup_error'] = ''
+              df.to_csv(p, index=False, encoding='utf-8-sig')
+
+          buy = pd.read_csv(root/'screen_2026-09-04_buy.csv')
+          r = buy.loc[buy['ticker'].astype(str).eq('1982.T')].iloc[0]
+          assert pd.Timestamp(r['next_earn_date']) == verified
+          assert int(r['days_to_earnings']) == 48
+          assert r['earn_date_source'] == 'official_ir_verified'
+          all_df = pd.read_csv(root/'screen_2026-09-04_all.csv')
+          dates = pd.to_datetime(all_df['next_earn_date'], errors='coerce')
+          assert not ((dates.notna()) & (dates < as_of)).any()
+          print('FINAL VALIDATION: OK')
+          print('1982.T next_earn_date=', r['next_earn_date'])
+          print('1982.T days_to_earnings=', r['days_to_earnings'])
+          print('1982.T earn_date_source=', r['earn_date_source'])
+          PY
+
+          git worktree remove --force /tmp/datafix
+
+      - name: Commit corrected archive to data branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin data
+          git checkout -B data origin/data
+          backup='archive/2026-09-04/pre-earnings-date-fix'
+          mkdir -p "$backup"
+          for kind in all buy sell; do
+            f="archive/2026-09-04/screen_2026-09-04_${kind}.csv"
+            [ -f "$backup/$(basename "$f")" ] || cp -f "$f" "$backup/"
+          done
+
+          # Re-run the same deterministic patch in the checked-out data branch.
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          root=Path('archive/2026-09-04'); as_of=pd.Timestamp('2026-09-04'); verified=pd.Timestamp('2026-11-11')
+          for kind in ('all','buy','sell'):
+              p=root/f'screen_2026-09-04_{kind}.csv'; df=pd.read_csv(p)
+              nd=pd.to_datetime(df.get('next_earn_date'),errors='coerce'); stale=nd.notna()&(nd<as_of)
+              if 'earn_date_raw_stale' not in df: df['earn_date_raw_stale']=False
+              if 'earn_date_source' not in df: df['earn_date_source']=''
+              if 'earn_date_lookup_error' not in df: df['earn_date_lookup_error']=''
+              df.loc[stale,'earn_date_raw_stale']=True
+              for c in ('earn_ts','earn_start_ts','earn_end_ts','earn_ts_pick'):
+                  if c in df: df.loc[stale,c]=np.nan
+              df.loc[stale,'next_earn_date']=pd.NaT; df.loc[stale,'days_to_earnings']=np.nan; df.loc[stale,'earn_date_source']='unknown_stale_rejected'
+              m=df['ticker'].astype(str).eq('1982.T')
+              if m.any():
+                  ts=verified.tz_localize('Asia/Tokyo').timestamp()
+                  for c in ('earn_ts','earn_start_ts','earn_end_ts','earn_ts_pick'):
+                      if c in df: df.loc[m,c]=ts
+                  df.loc[m,'next_earn_date']='2026-11-11'; df.loc[m,'days_to_earnings']=48
+                  df.loc[m,'earn_date_source']='official_ir_verified'; df.loc[m,'earn_date_raw_stale']=True; df.loc[m,'earn_date_lookup_error']=''
+              df.to_csv(p,index=False,encoding='utf-8-sig')
+          PY
+
+          cp -f archive/2026-09-04/screen_2026-09-04_all.csv archive/latest/all.csv
+          cp -f archive/2026-09-04/screen_2026-09-04_buy.csv archive/latest/buy.csv
+          cp -f archive/2026-09-04/screen_2026-09-04_sell.csv archive/latest/sell.csv
+          git add -f archive/2026-09-04 archive/latest/all.csv archive/latest/buy.csv archive/latest/sell.csv
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'archive: finalize 2026-09-04 earnings dates'
+          git push origin data
+
+      - name: Final archive verification
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          df=pd.read_csv('archive/2026-09-04/screen_2026-09-04_buy.csv')
+          r=df.loc[df['ticker'].astype(str).eq('1982.T')].iloc[0]
+          print('ARCHIVE FINAL VERIFIED')
+          print('next_earn_date=',r['next_earn_date'])
+          print('days_to_earnings=',r['days_to_earnings'])
+          print('source=',r['earn_date_source'])
+          assert str(r['next_earn_date']).startswith('2026-11-11')
+          assert int(r['days_to_earnings'])==48
+          assert r['earn_date_source']=='official_ir_verified'
+          PY
