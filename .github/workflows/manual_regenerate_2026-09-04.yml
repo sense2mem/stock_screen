@@ -51,15 +51,34 @@ jobs:
           echo "exists=false" >> "$GITHUB_OUTPUT"
 
       - name: Check Yahoo 2026-09-04 readiness
+        id: readiness
         if: steps.archived.outputs.exists != 'true'
+        shell: bash
         run: |
+          set +e
           python wait_for_market_data.py \
             --target-date 2026-09-04 \
             --attempts 7 \
             --interval-seconds 300
+          rc=$?
+          set -e
+
+          if [ "$rc" -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$rc" -eq 75 ]; then
+            echo "::notice::Yahoo has not published enough 2026-09-04 TSE daily bars yet. Regeneration is deferred without error."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::error::Market-data readiness probe failed unexpectedly (rc=${rc})."
+          exit "$rc"
 
       - name: Build compatible TSE listing
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -144,7 +163,7 @@ jobs:
           PY
 
       - name: Run 2026-09-04 stock screen
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         env:
           TZ: Asia/Tokyo
         run: |
@@ -155,7 +174,7 @@ jobs:
           test -f screen_2026-09-04_sell.csv
 
       - name: Upload 2026-09-04 CSV artifact
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: screen_csv_2026-09-04_${{ github.run_id }}
@@ -163,7 +182,7 @@ jobs:
           retention-days: 30
 
       - name: Run backtest
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         env:
           TZ: Asia/Tokyo
         run: |
@@ -171,7 +190,7 @@ jobs:
           RESULTS_DIR=. python backtest.py
 
       - name: Archive 2026-09-04 to data branch
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -214,7 +233,7 @@ jobs:
           git push origin data
 
       - name: Verify archived files
-        if: steps.archived.outputs.exists != 'true'
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         run: |
           git fetch origin data
           for f in all buy sell; do
