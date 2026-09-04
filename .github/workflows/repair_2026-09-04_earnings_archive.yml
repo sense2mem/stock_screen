@@ -1,0 +1,203 @@
+name: repair 2026-09-04 archived earnings dates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/repair_2026-09-04_earnings_archive.yml"
+  workflow_dispatch:
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Copy existing Sep 4 archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin data
+          rm -rf /tmp/stock_screen_data /tmp/earnings_fix
+          git worktree add --detach /tmp/stock_screen_data origin/data
+          mkdir -p /tmp/earnings_fix
+          for kind in all buy sell; do
+            src="/tmp/stock_screen_data/archive/2026-09-04/screen_2026-09-04_${kind}.csv"
+            test -f "$src"
+            cp -f "$src" "/tmp/earnings_fix/"
+          done
+
+      - name: Repair earnings fields only
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          from earnings_date_guard import repair_earnings_dates, _unix_to_date
+          import screen_yearend as screen
+
+          base = Path('/tmp/earnings_fix')
+          as_of = pd.Timestamp('2026-09-04')
+          all_path = base / 'screen_2026-09-04_all.csv'
+          all_df = pd.read_csv(all_path)
+
+          repaired = repair_earnings_dates(
+              all_df,
+              all_df,
+              as_of_date=as_of,
+              buy_score_min=screen.PULLBACK_SCORE_MIN,
+              sell_score_min=screen.SELL_SCORE_MIN,
+              pause_sec=0.05,
+          )
+
+          repaired['earn_ts_pick'] = (
+              pd.to_numeric(repaired['earn_start_ts'], errors='coerce')
+              .fillna(pd.to_numeric(repaired['earn_ts'], errors='coerce'))
+              .fillna(pd.to_numeric(repaired['earn_end_ts'], errors='coerce'))
+          )
+          repaired['next_earn_date'] = repaired['earn_ts_pick'].apply(_unix_to_date)
+
+          def busdays(d):
+              if d is None or pd.isna(d):
+                  return np.nan
+              return int(np.busday_count(
+                  np.datetime64(as_of.date()),
+                  np.datetime64(pd.Timestamp(d).date()),
+              ))
+
+          repaired['days_to_earnings'] = repaired['next_earn_date'].apply(busdays)
+
+          stale_dates = repaired.loc[
+              repaired['next_earn_date'].notna()
+              & (pd.to_datetime(repaired['next_earn_date']) < as_of)
+          ]
+          if not stale_dates.empty:
+              raise RuntimeError(
+                  f"past next_earn_date remains for {len(stale_dates)} rows"
+              )
+
+          audit_cols = [
+              'earn_ts', 'earn_start_ts', 'earn_end_ts', 'earn_ts_pick',
+              'next_earn_date', 'days_to_earnings',
+              'earn_date_source', 'earn_date_raw_stale',
+              'earn_date_lookup_error',
+          ]
+          mapping = repaired[['ticker', *audit_cols]].copy()
+
+          repaired.to_csv(all_path, index=False, encoding='utf-8-sig')
+
+          for kind in ('buy', 'sell'):
+              path = base / f'screen_2026-09-04_{kind}.csv'
+              df = pd.read_csv(path)
+              for col in audit_cols:
+                  if col in df.columns:
+                      df = df.drop(columns=[col])
+              df = df.merge(mapping, on='ticker', how='left', validate='m:1')
+              df.to_csv(path, index=False, encoding='utf-8-sig')
+
+          buy = pd.read_csv(base / 'screen_2026-09-04_buy.csv')
+          row = buy.loc[buy['ticker'].astype(str).eq('1982.T')]
+          if row.empty:
+              raise RuntimeError('1982.T missing from repaired buy CSV')
+          r = row.iloc[0]
+          earnings = pd.to_datetime(r['next_earn_date'], errors='coerce')
+          days = pd.to_numeric(r['days_to_earnings'], errors='coerce')
+          source = str(r.get('earn_date_source', ''))
+          raw_stale = bool(r.get('earn_date_raw_stale', False))
+          lookup_error = str(r.get('earn_date_lookup_error', ''))
+
+          print('1982.T next_earn_date=', earnings.date() if pd.notna(earnings) else None)
+          print('1982.T days_to_earnings=', days)
+          print('1982.T earn_date_source=', source)
+          print('1982.T earn_date_raw_stale=', raw_stale)
+          print('1982.T earn_date_lookup_error=', lookup_error)
+
+          if earnings != pd.Timestamp('2026-11-11'):
+              raise RuntimeError(f'unexpected 1982.T earnings date: {earnings}')
+          if int(days) != 48:
+              raise RuntimeError(f'unexpected 1982.T days_to_earnings: {days}')
+          if not source or source == 'unknown':
+              raise RuntimeError('1982.T earnings source is unknown')
+
+          print('EARNINGS ARCHIVE REPAIR VALIDATION: OK')
+          PY
+
+      - name: Upload corrected CSV artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: screen_2026-09-04_earnings_repaired_${{ github.run_id }}
+          path: /tmp/earnings_fix/screen_2026-09-04_*.csv
+          retention-days: 30
+
+      - name: Backup old archive and install corrected CSVs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree remove --force /tmp/stock_screen_data || true
+          git fetch origin data
+          git checkout -B data origin/data
+
+          target="archive/2026-09-04"
+          backup="$target/pre-earnings-date-fix"
+          mkdir -p "$backup"
+
+          for kind in all buy sell; do
+            old="$target/screen_2026-09-04_${kind}.csv"
+            if [ -f "$old" ] && [ ! -f "$backup/screen_2026-09-04_${kind}.csv" ]; then
+              cp -f "$old" "$backup/"
+            fi
+            cp -f "/tmp/earnings_fix/screen_2026-09-04_${kind}.csv" "$target/"
+          done
+
+          mkdir -p archive/latest
+          cp -f /tmp/earnings_fix/screen_2026-09-04_all.csv archive/latest/all.csv
+          cp -f /tmp/earnings_fix/screen_2026-09-04_buy.csv archive/latest/buy.csv
+          cp -f /tmp/earnings_fix/screen_2026-09-04_sell.csv archive/latest/sell.csv
+
+          git add -f "$target" archive/latest/all.csv archive/latest/buy.csv archive/latest/sell.csv
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "archive: repair 2026-09-04 earnings dates"
+          git push origin data
+
+      - name: Verify corrected data branch
+        run: |
+          git fetch origin data
+          git checkout -B data origin/data
+          python - <<'PY'
+          import pandas as pd
+          path = 'archive/2026-09-04/screen_2026-09-04_buy.csv'
+          df = pd.read_csv(path)
+          r = df.loc[df['ticker'].astype(str).eq('1982.T')].iloc[0]
+          earnings = pd.to_datetime(r['next_earn_date'])
+          days = int(pd.to_numeric(r['days_to_earnings']))
+          source = str(r['earn_date_source'])
+          print('ARCHIVE VERIFIED')
+          print('1982.T next_earn_date=', earnings.date())
+          print('1982.T days_to_earnings=', days)
+          print('1982.T earn_date_source=', source)
+          assert earnings == pd.Timestamp('2026-11-11')
+          assert days == 48
+          assert source and source != 'unknown'
+          PY
