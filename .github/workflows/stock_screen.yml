@@ -1,15 +1,13 @@
 name: stock_screen (weekday 20:17 JST)
 on:
-  push:
-    paths:
-      - ".github/workflows/stock_screen.yml"
   schedule:
-    - cron: "17 11 * * 1-5"   # 20:17 JST (UTC+9), avoid top-of-hour congestion
+    - cron: "17 11 * * 1-5"   # 20:17 JST Mon-Fri
+    - cron: "30 15 * * 1-5"   # 00:30 JST Tue-Sat: catch up previous TSE session
   workflow_dispatch:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 90        # stale時の1回再取得を含める
+    timeout-minutes: 90
     permissions:
       contents: write
     concurrency:
@@ -36,7 +34,75 @@ jobs:
           # JPX銘柄一覧URL障害時のフォールバック用
           pip install finance-datareader tokyo-stock-exchange xlwt --quiet
 
+      - name: Resolve target TSE session
+        id: target
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          target="$(python - <<'PY'
+          from run_stock_screen import resolve_expected_market_date
+          print(resolve_expected_market_date().strftime('%Y-%m-%d'))
+          PY
+          )"
+          echo "Target TSE session: ${target}"
+          echo "date=${target}" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when target is already archived
+        id: archived
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.target.outputs.date }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/stock_screen_existing
+          git fetch origin data || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/data; then
+            git worktree add --detach /tmp/stock_screen_existing origin/data
+            trap 'git worktree remove --force /tmp/stock_screen_existing 2>/dev/null || true' EXIT
+
+            if [ -f "/tmp/stock_screen_existing/archive/${TARGET_DATE}/screen_${TARGET_DATE}_all.csv" ] \
+              && [ -f "/tmp/stock_screen_existing/archive/${TARGET_DATE}/screen_${TARGET_DATE}_buy.csv" ] \
+              && [ -f "/tmp/stock_screen_existing/archive/${TARGET_DATE}/screen_${TARGET_DATE}_sell.csv" ]; then
+              echo "Target ${TARGET_DATE} is already archived; this run is a no-op."
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Yahoo target-session bars
+        id: readiness
+        if: steps.archived.outputs.exists != 'true'
+        shell: bash
+        env:
+          TARGET_DATE: ${{ steps.target.outputs.date }}
+        run: |
+          set +e
+          python wait_for_market_data.py \
+            --target-date "$TARGET_DATE" \
+            --attempts 7 \
+            --interval-seconds 300
+          rc=$?
+          set -e
+
+          if [ "$rc" -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$rc" -eq 75 ]; then
+            echo "::notice::Yahoo has not published ${TARGET_DATE} TSE daily bars yet. This run is deferred without error; the 00:30 JST catch-up run will try again."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::error::Market-data readiness probe failed unexpectedly (rc=${rc})."
+          exit "$rc"
+
       - name: Download data_e.xls (JPX with fallback)
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -56,7 +122,6 @@ jobs:
           if not p.is_file() or p.stat().st_size == 0:
               raise SystemExit(1)
           magic = p.read_bytes()[:8]
-          # Legacy XLS (OLE) or XLSX (ZIP). Pandas can determine either format by signature.
           if magic.startswith(b"\xd0\xcf\x11\xe0") or magic.startswith(b"PK\x03\x04"):
               raise SystemExit(0)
           raise SystemExit(1)
@@ -136,10 +201,8 @@ jobs:
               raise RuntimeError(f"Validated ticker count is too small: {len(codes)}")
           PY
 
-      # ─────────────────────────────────────────
-      # ① スクリーニング
-      # ─────────────────────────────────────────
       - name: Run screen
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         env:
           TZ: Asia/Tokyo
         run: |
@@ -148,15 +211,16 @@ jobs:
           ls -la screen_*.csv || true
 
       - name: Upload CSV artifacts
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: screen_csv_${{ github.run_id }}
           path: |
             screen_*.csv
 
-      # 固定保有テストは検証中の追加機能。失敗しても従来処理を止めない。
       - name: Prepare fixed-holding signal history
         id: prepare_fixed_holding
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         continue-on-error: true
         shell: bash
         run: |
@@ -198,43 +262,37 @@ jobs:
 
       - name: Upload fixed-holding report
         uses: actions/upload-artifact@v6
-        if: always()
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true' && always()
         with:
           name: fixed_holding_report_${{ github.run_id }}
           path: fixed_holding_report/
           if-no-files-found: warn
           retention-days: 30
 
-      # ─────────────────────────────────────────
-      # ② 既存バックテスト
-      # ─────────────────────────────────────────
       - name: Run backtest
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         env:
           TZ: Asia/Tokyo
         run: |
           mkdir -p backtest_report
-          # RESULTS_DIR=. でカレントディレクトリのCSVを読み込む
           RESULTS_DIR=. python backtest.py
 
       - name: Upload backtest report
         uses: actions/upload-artifact@v6
-        if: always()
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true' && always()
         with:
           name: backtest_report_${{ github.run_id }}
           path: backtest_report/
           retention-days: 30
 
-      # ─────────────────────────────────────────
-      # ③ dataブランチへのアーカイブ（既存＋バックテスト結果を追加）
-      # ─────────────────────────────────────────
       - name: Archive CSVs to data branch
+        if: steps.archived.outputs.exists != 'true' && steps.readiness.outputs.ready == 'true'
         shell: bash
         env:
           TZ: Asia/Tokyo
         run: |
           set -euo pipefail
           export TZ=Asia/Tokyo
-          # 0) CSVがあるか確認
           shopt -s nullglob
           all_files=(screen_*.csv)
           if [ ${#all_files[@]} -eq 0 ]; then
@@ -242,50 +300,43 @@ jobs:
             ls -la
             exit 1
           fi
-          # 1) 生成CSVから「最新日」を抽出
+
           latest="$(printf '%s\n' "${all_files[@]}" | sort | tail -n 1)"
           day="${latest#screen_}"
           day="${day%%_*}"
-          # 当日分だけ
           files=(screen_"${day}"_*.csv)
           if [ ${#files[@]} -eq 0 ]; then
             echo "No CSV for day=${day}. Existing:"
             ls -la
             exit 1
           fi
-          # バックテストレポートの退避
+
           bt_html=""
-          shopt -s nullglob
           bt_files=(backtest_report/report_*.html backtest_report/trades_*.csv backtest_report/equity_*.csv)
           if [ ${#bt_files[@]} -gt 0 ]; then
             mkdir -p /tmp/backtest_report
             cp -f "${bt_files[@]}" /tmp/backtest_report/
             bt_html="found"
           fi
-          # 固定保有レポートもブランチ切替前に退避。存在しない場合は何もしない。
+
           fh_found=""
           rm -rf /tmp/fixed_holding_report
           if [ -d fixed_holding_report ] && find fixed_holding_report -type f -name '*.csv' -print -quit | grep -q .; then
             cp -a fixed_holding_report /tmp/fixed_holding_report
             fh_found="found"
           fi
-          # 退避（ブランチ切替で消えるのを防ぐ）
+
           rm -rf /tmp/screen_csv
           mkdir -p /tmp/screen_csv
           cp -f "${files[@]}" /tmp/screen_csv/
-          # 2) dataブランチへ
+
           git fetch origin data || true
           if git show-ref --verify --quiet refs/remotes/origin/data; then
             git checkout -B data origin/data
           else
             git checkout -b data
           fi
-          # 3) 日付アーカイブ
-          #
-          # Collision policy:
-          # - target does not exist -> create it
-          # - target exists and screen CSVs are byte-identical -> no-op
-          # - target exists but differs -> FAIL, never overwrite
+
           if [ -d "archive/${day}" ]; then
             new_screen=(/tmp/screen_csv/*.csv)
             existing_screen=(archive/"${day}"/screen_"${day}"_*.csv)
@@ -299,12 +350,10 @@ jobs:
             for src in "${new_screen[@]}"; do
               base="$(basename "$src")"
               dst="archive/${day}/${base}"
-
               if [ ! -f "$dst" ]; then
                 echo "::error::Archive collision for ${day}: missing existing file ${base}"
                 exit 1
               fi
-
               if ! cmp -s "$src" "$dst"; then
                 echo "::error::Archive collision for ${day}: ${base} differs."
                 echo "Existing archive will NOT be overwritten."
@@ -320,7 +369,6 @@ jobs:
           mkdir -p "archive/${day}"
           cp -f /tmp/screen_csv/*.csv "archive/${day}/"
 
-          # バックテスト結果もアーカイブ
           if [ -n "$bt_html" ]; then
             mkdir -p "archive/${day}/backtest"
             cp -f /tmp/backtest_report/* "archive/${day}/backtest/"
@@ -330,7 +378,7 @@ jobs:
             mkdir -p "archive/${day}/fixed_holding"
             cp -a /tmp/fixed_holding_report/. "archive/${day}/fixed_holding/"
           fi
-          # 4) latest固定名
+
           latest_src=(/tmp/screen_csv/*.csv)
           mkdir -p "archive/latest"
           for f in "${latest_src[@]}"; do
@@ -339,7 +387,7 @@ jobs:
             kind="${kind%.csv}"
             cp -f "$f" "archive/latest/${kind}.csv"
           done
-          # バックテストのlatestも更新
+
           if [ -n "$bt_html" ]; then
             mkdir -p "archive/latest/backtest"
             cp -f /tmp/backtest_report/* "archive/latest/backtest/"
@@ -349,6 +397,7 @@ jobs:
             mkdir -p "archive/latest/fixed_holding"
             cp -a /tmp/fixed_holding_report/. "archive/latest/fixed_holding/"
           fi
+
           git add -f archive
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
