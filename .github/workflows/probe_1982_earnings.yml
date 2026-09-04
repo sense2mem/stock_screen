@@ -1,0 +1,52 @@
+name: probe 1982.T earnings fallback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe_1982_earnings.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Probe 1982.T
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from earnings_date_guard import fetch_ticker_future_earnings_date
+
+          day, source, error = fetch_ticker_future_earnings_date(
+              '1982.T',
+              pd.Timestamp('2026-09-04'),
+          )
+
+          print('date=', day)
+          print('source=', source)
+          print('error=', error)
+
+          if day != pd.Timestamp('2026-11-11'):
+              raise RuntimeError(f'unexpected earnings date: {day}')
+          if not source or source == 'unknown':
+              raise RuntimeError(f'unknown source: {source}; error={error}')
+
+          print('1982.T EARNINGS FALLBACK: OK')
+          PY
