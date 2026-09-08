@@ -1,4 +1,12 @@
-name: stock_screen (weekday 20:17 JST)
+name: stock_screen (weekday scheduled)
+run-name: >-
+  stock_screen / ${{
+    github.event_name == 'workflow_dispatch' && 'manual'
+    || github.event.schedule == '17 11 * * 1-5' && '20:17 JST regular'
+    || github.event.schedule == '30 15 * * 1-5' && '00:30 JST catch-up'
+    || github.event_name
+  }}
+
 on:
   schedule:
     - cron: "17 11 * * 1-5"   # 20:17 JST Mon-Fri
