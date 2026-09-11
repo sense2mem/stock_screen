@@ -4,6 +4,7 @@ run-name: >-
     github.event_name == 'workflow_dispatch' && 'manual'
     || github.event.schedule == '17 11 * * 1-5' && '20:17 JST regular'
     || github.event.schedule == '30 15 * * 1-5' && '00:30 JST catch-up'
+    || github.event.schedule == '20 21 * * 1-5' && '06:20 JST final catch-up'
     || github.event_name
   }}
 
@@ -11,6 +12,7 @@ on:
   schedule:
     - cron: "17 11 * * 1-5"   # 20:17 JST Mon-Fri
     - cron: "30 15 * * 1-5"   # 00:30 JST Tue-Sat: catch up previous TSE session
+    - cron: "20 21 * * 1-5"   # 06:20 JST Tue-Sat: final catch-up previous TSE session
   workflow_dispatch:
 jobs:
   run:
@@ -101,7 +103,7 @@ jobs:
           fi
 
           if [ "$rc" -eq 75 ]; then
-            echo "::notice::Yahoo has not published ${TARGET_DATE} TSE daily bars yet. This run is deferred without error; the 00:30 JST catch-up run will try again."
+            echo "::notice::Yahoo has not published ${TARGET_DATE} TSE daily bars yet. This run is deferred without error; a later scheduled/manual retry can try again."
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
