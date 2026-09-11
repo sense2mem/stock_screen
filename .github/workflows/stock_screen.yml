@@ -2,17 +2,17 @@ name: stock_screen (weekday scheduled)
 run-name: >-
   stock_screen / ${{
     github.event_name == 'workflow_dispatch' && 'manual'
-    || github.event.schedule == '17 11 * * 1-5' && '20:17 JST regular'
-    || github.event.schedule == '30 15 * * 1-5' && '00:30 JST catch-up'
-    || github.event.schedule == '20 21 * * 1-5' && '06:20 JST final catch-up'
+    || github.event.schedule == '0 8 * * 1-5' && '17:00 JST regular'
+    || github.event.schedule == '30 12 * * 1-5' && '21:30 JST catch-up'
+    || github.event.schedule == '20 18 * * 1-5' && '03:20 JST final catch-up'
     || github.event_name
   }}
 
 on:
   schedule:
-    - cron: "17 11 * * 1-5"   # 20:17 JST Mon-Fri
-    - cron: "30 15 * * 1-5"   # 00:30 JST Tue-Sat: catch up previous TSE session
-    - cron: "20 21 * * 1-5"   # 06:20 JST Tue-Sat: final catch-up previous TSE session
+    - cron: "0 8 * * 1-5"     # 17:00 JST Mon-Fri
+    - cron: "30 12 * * 1-5"   # 21:30 JST Mon-Fri: catch up same TSE session
+    - cron: "20 18 * * 1-5"   # 03:20 JST Tue-Sat: final catch-up previous TSE session
   workflow_dispatch:
 jobs:
   run:
