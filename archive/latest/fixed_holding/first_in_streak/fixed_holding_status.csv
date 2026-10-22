@@ -18,9 +18,7 @@
 2026-08-05,4975.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-05,6145.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-05,6651.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-08-06,7516.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-06,7516.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-08-06,9824.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-06,9824.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-10,9039.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-10,9039.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -56,7 +54,6 @@
 2026-09-16,8771.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-16,8771.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-16,8771.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-09-18,4290.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-18,4290.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-18,4290.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-18,4290.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -80,7 +77,6 @@
 2026-09-28,8923.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,8923.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,8923.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-10-07,7581.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-07,7581.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-07,7581.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-07,7581.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -110,7 +106,6 @@
 2026-10-14,8163.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-14,8163.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-14,8163.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-10-15,6465.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-15,6465.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-15,6465.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-15,6465.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -158,9 +153,9 @@
 2026-10-19,8985.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-19,8985.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-19,8985.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,5,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,10,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,20,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,40,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,50,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-10-21,8923.T,60,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-10-21,8923.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
