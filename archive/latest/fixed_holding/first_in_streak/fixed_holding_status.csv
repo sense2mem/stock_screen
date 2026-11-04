@@ -11,8 +11,6 @@
 2026-05-18,6201.T,40,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
 2026-05-18,6201.T,50,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
 2026-05-18,6201.T,60,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
-2026-08-04,5121.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-08-04,9824.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-05,4975.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-05,6145.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-05,6651.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -136,9 +134,15 @@
 2026-10-30,2229.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-30,2229.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-30,2229.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,5,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,10,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,20,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,40,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,50,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,60,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-02,9948.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,5,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,10,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,20,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,40,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,50,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-04,5108.T,60,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
