@@ -11,8 +11,6 @@
 2026-05-18,6201.T,40,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
 2026-05-18,6201.T,50,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
 2026-05-18,6201.T,60,PRICE_DOWNLOAD_FAILED,empty or incomplete price response
-2026-08-10,9039.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-08-11,9039.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-12,1982.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-13,1982.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-08-17,1975.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -147,7 +145,6 @@
 2026-10-30,2229.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-30,2229.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-10-30,2229.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-11-02,9948.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-02,9948.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-02,9948.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-02,9948.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -159,15 +156,15 @@
 2026-11-04,5108.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-04,5108.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-04,5108.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,5,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,10,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,20,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,40,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,50,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,5101.T,60,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,5,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,10,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,20,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,40,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,50,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
-2026-11-09,7630.T,60,NO_NEXT_TRADING_DAY,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,5101.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
+2026-11-09,7630.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
