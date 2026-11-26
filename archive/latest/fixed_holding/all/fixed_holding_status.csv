@@ -35,10 +35,8 @@
 2026-09-25,7956.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-25,9031.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-25,9031.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-09-28,7956.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,7956.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,7956.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-09-28,8923.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,8923.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-28,8923.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-09-29,7956.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
@@ -152,13 +150,11 @@
 2026-11-17,3167.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-17,3167.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-17,3167.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-11-18,2782.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,2782.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,2782.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,2782.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,2782.T,50,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,2782.T,60,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
-2026-11-18,3167.T,5,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,3167.T,10,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,3167.T,20,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
 2026-11-18,3167.T,40,OPEN_INSUFFICIENT_DAYS,fixed holding period cannot yet be evaluated
